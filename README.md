@@ -1,34 +1,4 @@
-<!--
-# Copyright (c) 2018-2023, NVIDIA CORPORATION. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
-#  * Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-#  * Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in the
-#    documentation and/or other materials provided with the distribution.
-#  * Neither the name of NVIDIA CORPORATION nor the names of its
-#    contributors may be used to endorse or promote products derived
-#    from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
-# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
--->
-
-[![License](https://img.shields.io/badge/License-BSD3-lightgrey.svg)](https://opensource.org/licenses/BSD-3-Clause)
-
-# Kubernetes Deploy: Triton Inference Server Cluster
+# NGINX+ Ingress Controller for Triton Inference Server on ROSA
 
 A helm chart for installing a single cluster of Triton Inference
 Server is provided. By default the cluster contains a single instance
@@ -50,6 +20,8 @@ The steps below describe how to set-up a model repository, use helm to
 launch the inference server, and then send inference requests to the
 running server. You can access a Grafana endpoint to see real-time
 metrics reported by the inference server.
+
+# Deployment Instructions
 
 ## Installing Helm
 
@@ -79,7 +51,7 @@ $ helm init --service-account tiller --wait
 
 If you run into any issues, you can refer to the official installation guide [here](https://v2.helm.sh/docs/install/).
 
-## Model Repository
+## Create a Model Repository
 
 If you already have a model repository you may use that with this helm
 chart. If you do not have a model repository, you can checkout a local
@@ -111,11 +83,7 @@ To load the model from the AWS S3, you need to convert the following AWS credent
 
 ```
 echo -n 'REGION' | base64
-```
-```
 echo -n 'SECRECT_KEY_ID' | base64
-```
-```
 echo -n 'SECRET_ACCESS_KEY' | base64
 ```
 
@@ -154,8 +122,24 @@ import function in Grafana to import and view this dashboard.
 Deploy the inference server using the default configuration with the
 following commands.
 
+values.yaml
+```
+image:
+  imageName: nvcr.io/nvidia/tritonserver:24.03-py3
+  pullPolicy: IfNotPresent
+  # modelRepositoryServer: < Replace with the IP Address of your file server >
+  modelRepositoryPath: s3://ericji-triton-inference-server-repository/model_repository
+  numGpus: 0
+
+secret:
+  region: 
+  id: 
+  key: 
+```
+
 ```
 $ cd <directory containing Chart.yaml>
+$ helm dependency build
 $ helm install example .
 ```
 
@@ -163,9 +147,9 @@ Use kubectl to see status and wait until the inference server pods are
 running.
 
 ```
-$ kubectl get pods
-NAME                                               READY   STATUS    RESTARTS   AGE
-example-triton-inference-server-5f74b55885-n6lt7   1/1     Running   0          2m21s
+❯ kubectl get pods
+NAME                                               READY   STATUS             RESTARTS           AGE
+example-triton-inference-server-594fbc4489-9g226   1/1     Running            0                  6d15h
 ```
 
 There are several ways of overriding the default configuration as
@@ -194,6 +178,44 @@ EOF
 $ helm install example -f config.yaml .
 ```
 
+After you start Triton you will see output on the logs showing the server starting up and loading the model. When you see output like the following, Triton is ready to accept inference requests.
+```
+❯ oc logs example-triton-inference-server-594fbc4489-9g226 triton-inference-server
+=============================
+== Triton Inference Server ==
+=============================
+...
+I0412 06:10:45.228787 1 server.cc:677]
++----------------------+---------+--------+
+| Model                | Version | Status |
++----------------------+---------+--------+
+| simple               | 1       | READY  |
+| simple_dyna_sequence | 1       | READY  |
+| simple_identity      | 1       | READY  |
+| simple_int8          | 1       | READY  |
+| simple_sequence      | 1       | READY  |
+| simple_string        | 1       | READY  |
++----------------------+---------+--------+
+
+I0412 06:10:45.228945 1 metrics.cc:770] Collecting CPU metrics
+I0412 06:10:45.229060 1 tritonserver.cc:2538]
+...
+...
+I0412 06:10:45.230810 1 grpc_server.cc:2466] Started GRPCInferenceService at 0.0.0.0:8001
+I0412 06:10:45.231094 1 http_server.cc:4636] Started HTTPService at 0.0.0.0:8000
+I0412 06:10:45.272846 1 http_server.cc:320] Started Metrics Service at 0.0.0.0:8002
+```
+## Deploy NGINX Plus Ingress Controller
+OpenShift Operator to install NGINX Ingress Controller
+```
+❯ oc get service -n nginx-ingress
+NAME                                                        TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)                      AGE
+dashboard-nginx-ingress                                     LoadBalancer   172.30.91.86     aae14a60db4b84cdfa76cbb7fa5dbf24-861668526.us-west-2.elb.amazonaws.com   80:31137/TCP                 4d16h
+nginx-ingress-operator-controller-manager-metrics-service   ClusterIP      172.30.7.114     <none>                                                                   8443/TCP                     5d23h
+nginxingress-sample-nginx-ingress-controller                LoadBalancer   172.30.226.115   a2bc4dfecf77b4b4eb75c5ed084716c1-364761670.us-west-2.elb.amazonaws.com   80:31080/TCP,443:32116/TCP   5d23h
+```
+
+
 ## Using Triton Inference Server
 
 Now that the inference server is running you can send HTTP or GRPC
@@ -203,10 +225,23 @@ to find the external IP for the inference server. In this case it is
 34.83.9.133.
 
 ```
-$ kubectl get services
-NAME                             TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)                                        AGE
-...
-example-triton-inference-server  LoadBalancer   10.18.13.28    34.83.9.133   8000:30249/TCP,8001:30068/TCP,8002:32723/TCP   47m
+$ kubectl get svc
+NAME                                     TYPE           CLUSTER-IP     EXTERNAL-IP    PORT(S)                      AGE
+kubernetes                               ClusterIP      10.0.0.1       <none>         443/TCP                      10d
+mytest-nginx-ingress-controller          LoadBalancer   10.0.179.216   20.252.89.78   80:31336/TCP,443:31862/TCP   39m
+mytest-triton-inference-server           ClusterIP      10.0.231.100   <none>         8000/TCP,8001/TCP,8002/TCP   39m
+mytest-triton-inference-server-metrics   ClusterIP      10.0.21.98     <none>         8080/TCP                     39m
+nfs-service                              ClusterIP      10.0.194.248   <none>         2049/TCP,20048/TCP,111/TCP   123m...
+❯ oc get pods -n nginx-ingress
+NAME                                                            READY   STATUS    RESTARTS   AGE
+nginx-ingress-operator-controller-manager-db55c768c-bxwpg       2/2     Running   0          5d23h
+nginxingress-sample-nginx-ingress-controller-57779c599c-mgfdc   1/1     Running   0          4d16h
+
+❯ oc get virtualserver
+NAME             STATE   HOST                        IP    PORTS      AGE
+triton-grpc      Valid   triton-grpc.f5demo.net            [80,443]   5h8m
+triton-http      Valid   triton-http.f5demo.net            [80,443]   5h11m
+triton-metrics   Valid   triton-metrics.f5demo.net         [80,443]   5h8m
 ```
 
 The inference server exposes an HTTP endpoint on port 8000, and GRPC
@@ -218,19 +253,39 @@ from the HTTP endpoint.
 $ curl 34.83.9.133:8000/v2
 ```
 
-Follow the [QuickStart](../../docs/getting_started/quickstart.md) to get the example
-image classification client that can be used to perform inferencing
-using image classification models being served by the inference
-server. For example,
+## Send an Inference Request
+
+Use docker pull to get the client libraries and examples image
+from NGC.
 
 ```
-$ image_client -u 34.83.9.133:8000 -m inception_graphdef -s INCEPTION -c3 mug.jpg
-Request 0, batch size 1
-Image 'images/mug.jpg':
-    504 (COFFEE MUG) = 0.723992
-    968 (CUP) = 0.270953
-    967 (ESPRESSO) = 0.00115997
+$ docker pull nvcr.io/nvidia/tritonserver:<xx.yy>-py3-sdk
 ```
+
+Where \<xx.yy\> is the version that you want to pull. Run the client
+image.
+
+```
+$ docker run -it --rm --net=host nvcr.io/nvidia/tritonserver:<xx.yy>-py3-sdk
+```
+
+From within the nvcr.io/nvidia/tritonserver:<xx.yy>-py3-sdk
+image, run the example image-client application to perform image
+classification using the example densenet_onnx model.
+
+To send a request for the densenet_onnx model use an image from the
+/workspace/images directory. In this case we ask for the top 3
+classifications.
+
+```
+root@docker-desktop:/workspace# /workspace/install/bin/image_client -u triton-http.f5demo.net  -m densenet_onnx -c 3 -s INCEPTION /workspace/images/mug.jpg
+Request 0, batch size 1
+Image '/workspace/images/mug.jpg':
+    15.349564 (504) = COFFEE MUG
+    13.227464 (968) = CUP
+    10.424892 (505) = COFFEEPOT
+```
+
 
 ## Cleanup
 
