@@ -1,55 +1,41 @@
 # NGINX+ Ingress Controller for Triton Inference Server on ROSA
 
-A helm chart for installing a single cluster of Triton Inference
-Server is provided. By default the cluster contains a single instance
-of the inference server but the *replicaCount* configuration parameter
-can be set to create a cluster of any size, as described below.
 
-This guide assumes you already have a functional Kubernetes cluster
-and helm installed (see below for instructions on installing
-helm). Note the following requirements:
+This repository showcases a practical implementation of the NGINX Plus Ingress Controller managing and securing the NVIDIA Triton Inference Server deployed on Red Hat OpenShift Service on AWS (ROSA). The example demonstrates how to effectively control and safeguard the server environment using NGINX Plus capabilities within the ROSA ecosystem.
 
-* The helm chart deploys Prometheus and Grafana to collect and display Triton metrics. To use this helm chart you must install Prpmetheus and Grafana in your cluster as described below and your cluster must contain sufficient CPU resources to support these services.
+## Prerequisites
 
-* If you want Triton Server to use GPUs for inferencing, your cluster
-must be configured to contain the desired number of GPU nodes (EC2 G4 instances recommended)
-with support for the NVIDIA driver and CUDA version required by the version
-of the inference server you are using.
+Before proceeding, ensure that you have:
+- A functional Red Hat OpenShift on AWS (ROSA) cluster.
+- Helm installed (refer to the [Helm installation guide](https://helm.sh/docs/intro/install/)).
+- Prometheus and Grafana installed to collect and display metrics from the Triton Inference Server (instructions provided below).
+- If using GPUs for inference, ensure your cluster includes GPU nodes with appropriate NVIDIA drivers and CUDA support.
 
-The steps below describe how to set-up a model repository, use helm to
-launch the inference server, and then send inference requests to the
-running server. You can access a Grafana endpoint to see real-time
-metrics reported by the inference server.
+## Setup Overview
 
-# Deployment Instructions
+1. **Prepare a Model Repository**: Setup a repository where the Triton Server will fetch its models.
+2. **Install Prometheus and Grafana**: These services are required for monitoring.
+3. **Deploy the Triton Inference Server**: Using Helm, deploy the server into your Kubernetes environment.
+4. **Access Metrics and Perform Inference**: Monitor the server and send inference requests.
 
-## Installing Helm
+## Detailed Instructions
 
-### Helm v3
+### Install Helm
 
-If you do not already have Helm installed in your Kubernetes cluster,
-executing the following steps from the [official helm install
-guide](https://helm.sh/docs/intro/install/) will
-give you a quick setup.
+#### Helm v3
+For a new installation:
+- Follow the steps from the [official helm install guide](https://helm.sh/docs/intro/install/).
 
-If you're currently using Helm v2 and would like to migrate to Helm v3,
-please see the [official migration guide](https://helm.sh/docs/topics/v2_v3_migration/).
+To migrate from Helm v2 to v3:
+- Refer to the [official migration guide](https://helm.sh/docs/topics/v2_v3_migration/).
 
-### Helm v2
-
-> **NOTE**: Moving forward this chart will only be tested and maintained for Helm v3.
-
-Below are example instructions for installing Helm v2.
-
+#### Helm v2 Installation (Deprecated)
+```bash
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get | bash
+kubectl create serviceaccount -n kube-system tiller
+kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+helm init --service-account tiller --wait
 ```
-$ curl https://raw.githubusercontent.com/helm/helm/master/scripts/get | bash
-$ kubectl create serviceaccount -n kube-system tiller
-serviceaccount/tiller created
-$ kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-$ helm init --service-account tiller --wait
-```
-
-If you run into any issues, you can refer to the official installation guide [here](https://v2.helm.sh/docs/install/).
 
 ## Create a Model Repository
 
@@ -78,7 +64,7 @@ bucket.
 $ aws s3 cp --recursive docs/examples/model_repository s3://triton-inference-server-repository/model_repository
 ```
 
-### AWS Model Repository
+### AWS Model Repository Setup
 To load the model from the AWS S3, you need to convert the following AWS credentials in the base64 format and add it to the values.yaml
 
 ```
@@ -119,10 +105,11 @@ import function in Grafana to import and view this dashboard.
 
 ## Deploy the Inference Server
 
-Deploy the inference server using the default configuration with the
-following commands.
+To deploy the Triton Inference Server using the default configurations, follow these steps:
 
-values.yaml
+### Configuration
+First, set up the values.yaml file with the necessary parameters:
+
 ```
 image:
   imageName: nvcr.io/nvidia/tritonserver:24.03-py3
@@ -137,11 +124,16 @@ secret:
   key: 
 ```
 
+### Deployment Commands
+Navigate to the directory containing Chart.yaml, then build and install the helm chart:
+
 ```
 $ cd <directory containing Chart.yaml>
 $ helm dependency build
 $ helm install example .
 ```
+
+### Monitoring Pod Status
 
 Use kubectl to see status and wait until the inference server pods are
 running.
@@ -152,14 +144,9 @@ NAME                                               READY   STATUS             RE
 example-triton-inference-server-594fbc4489-9g226   1/1     Running            0                  6d15h
 ```
 
-There are several ways of overriding the default configuration as
-described in this [helm
-documentation](https://helm.sh/docs/using_helm/#customizing-the-chart-before-installing).
+### Customizing Configuration
 
-You can edit the values.yaml file directly or you can use the *--set*
-option to override a single parameter with the CLI. For example, to
-deploy a cluster of four inference servers use *--set* to set the
-replicaCount parameter.
+To customize the deployment, you can directly modify the values.yaml file or use the --set option with the CLI to override specific parameters. For example, to deploy a cluster with four inference servers:
 
 ```
 $ helm install example --set replicaCount=4 .
@@ -177,6 +164,8 @@ image:
 EOF
 $ helm install example -f config.yaml .
 ```
+
+### Viewing Server Logs
 
 After you start Triton you will see output on the logs showing the server starting up and loading the model. When you see output like the following, Triton is ready to accept inference requests.
 ```
