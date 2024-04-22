@@ -108,7 +108,7 @@ import function in Grafana to import and view this dashboard.
 To deploy the Triton Inference Server using the default configurations, follow these steps:
 
 ### Configuration
-First, set up the values.yaml file with the necessary parameters:
+First, set up the *values.yaml* file with the necessary parameters:
 
 ```
 image:
@@ -195,7 +195,7 @@ I0412 06:10:45.231094 1 http_server.cc:4636] Started HTTPService at 0.0.0.0:8000
 I0412 06:10:45.272846 1 http_server.cc:320] Started Metrics Service at 0.0.0.0:8002
 ```
 ## Deploy NGINX Plus Ingress Controller
-OpenShift Operator to install NGINX Ingress Controller
+OpenShift Operator to install NGINX Ingress Controller.
 ```
 ❯ oc get service -n nginx-ingress
 NAME                                                        TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)                      AGE
@@ -211,7 +211,7 @@ Now that the inference server is running you can send HTTP or GRPC
 requests to it to perform inferencing. By default, the inferencing
 service is exposed with a LoadBalancer service type. Use the following
 to find the external IP for the inference server. In this case it is
-34.83.9.133.
+AWS ELB of *aae14a60db4b84cdfa76cbb7fa5dbf24-861668526.us-west-2.elb.amazonaws.com*.
 
 ```
 $ kubectl get svc
@@ -226,6 +226,12 @@ NAME                                                            READY   STATUS  
 nginx-ingress-operator-controller-manager-db55c768c-bxwpg       2/2     Running   0          5d23h
 nginxingress-sample-nginx-ingress-controller-57779c599c-mgfdc   1/1     Running   0          4d16h
 
+❯ oc get service -n nginx-ingress
+NAME                                                        TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)                      AGE
+dashboard-nginx-ingress                                     LoadBalancer   172.30.91.86     aae14a60db4b84cdfa76cbb7fa5dbf24-861668526.us-west-2.elb.amazonaws.com   80:31137/TCP                 7d19h
+nginx-ingress-operator-controller-manager-metrics-service   ClusterIP      172.30.7.114     <none>                                                                   8443/TCP                     9d
+nginxingress-sample-nginx-ingress-controller                LoadBalancer   172.30.226.115   a2bc4dfecf77b4b4eb75c5ed084716c1-364761670.us-west-2.elb.amazonaws.com   80:31080/TCP,443:32116/TCP   9d
+
 ❯ oc get virtualserver
 NAME             STATE   HOST                        IP    PORTS      AGE
 triton-grpc      Valid   triton-grpc.f5demo.net            [80,443]   5h8m
@@ -239,7 +245,29 @@ port 8002. You can use curl to get the meta-data of the inference server
 from the HTTP endpoint.
 
 ```
-$ curl 34.83.9.133:8000/v2
+❯ curl triton-http.f5demo.net/v2 |jq
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   285  100   285    0     0   2187      0 --:--:-- --:--:-- --:--:--  2175
+{
+  "name": "triton",
+  "version": "2.44.0",
+  "extensions": [
+    "classification",
+    "sequence",
+    "model_repository",
+    "model_repository(unload_dependents)",
+    "schedule_policy",
+    "model_configuration",
+    "system_shared_memory",
+    "cuda_shared_memory",
+    "binary_tensor_data",
+    "parameters",
+    "statistics",
+    "trace",
+    "logging"
+  ]
+}
 ```
 
 ## Send an Inference Request
@@ -275,6 +303,24 @@ Image '/workspace/images/mug.jpg':
     10.424892 (505) = COFFEEPOT
 ```
 
+Enable port forwarding from the the Grafana service so you can access it from
+your local browser.
+
+```
+kubectl port-forward pod/grafana-a-deployment-7b8f46f98c-ftztg 3000:3000
+```
+Now you should be able to navigate in your browser to 127.0.0.1:3000
+and see the Grafana login page. Use username=root and
+password=start to log in.
+
+An example Grafana dashboard is available -*dashboard.json*- in the repo. Use the
+import function in Grafana to import and view this dashboard, (see below).
+
+<img src="images/img3.png" alt="Flowers">
+
+The NGINX+ dashboard to view service access metrics:
+
+<img src="images/img2.png" alt="Flowers">
 
 ## Cleanup
 
