@@ -2,6 +2,8 @@
 
 
 This repository showcases a practical implementation of the NGINX Plus Ingress Controller managing and securing the NVIDIA Triton Inference Server deployed on Red Hat OpenShift Service on AWS (ROSA). The example demonstrates how to effectively control and safeguard the server environment using NGINX Plus capabilities within the ROSA ecosystem.
+<img src="images/topo.png" alt="Flowers">
+
 
 ## Prerequisites
 
