@@ -244,7 +244,7 @@ endpoint on port 8001 and a Prometheus metrics endpoint on
 port 8002. You can use curl to get the meta-data of the inference server
 from the HTTP endpoint.
 
-```json
+```bash
 ❯ curl triton-http.f5demo.net/v2 |jq
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
