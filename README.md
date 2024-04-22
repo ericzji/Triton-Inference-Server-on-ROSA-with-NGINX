@@ -127,7 +127,7 @@ secret:
 ### Deployment Commands
 Navigate to the directory containing Chart.yaml, then build and install the helm chart:
 
-```
+```zsh
 $ cd <directory containing Chart.yaml>
 $ helm dependency build
 $ helm install example .
@@ -168,7 +168,7 @@ $ helm install example -f config.yaml .
 ### Viewing Server Logs
 
 After you start Triton you will see output on the logs showing the server starting up and loading the model. When you see output like the following, Triton is ready to accept inference requests.
-```
+```zsh
 ❯ oc logs example-triton-inference-server-594fbc4489-9g226 triton-inference-server
 =============================
 == Triton Inference Server ==
@@ -196,7 +196,7 @@ I0412 06:10:45.272846 1 http_server.cc:320] Started Metrics Service at 0.0.0.0:8
 ```
 ## Deploy NGINX Plus Ingress Controller
 OpenShift Operator to install NGINX Ingress Controller.
-```
+```bash
 ❯ oc get service -n nginx-ingress
 NAME                                                        TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)                      AGE
 dashboard-nginx-ingress                                     LoadBalancer   172.30.91.86     aae14a60db4b84cdfa76cbb7fa5dbf24-861668526.us-west-2.elb.amazonaws.com   80:31137/TCP                 4d16h
@@ -213,7 +213,7 @@ service is exposed with a LoadBalancer service type. Use the following
 to find the external IP for the inference server. In this case it is
 AWS ELB of *aae14a60db4b84cdfa76cbb7fa5dbf24-861668526.us-west-2.elb.amazonaws.com*.
 
-```
+```bash
 $ kubectl get svc
 NAME                                     TYPE           CLUSTER-IP     EXTERNAL-IP    PORT(S)                      AGE
 kubernetes                               ClusterIP      10.0.0.1       <none>         443/TCP                      10d
@@ -244,7 +244,7 @@ endpoint on port 8001 and a Prometheus metrics endpoint on
 port 8002. You can use curl to get the meta-data of the inference server
 from the HTTP endpoint.
 
-```
+```json
 ❯ curl triton-http.f5demo.net/v2 |jq
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
