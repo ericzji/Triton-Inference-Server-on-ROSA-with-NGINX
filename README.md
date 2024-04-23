@@ -320,9 +320,30 @@ import function in Grafana to import and view this dashboard, (see below).
 
 <img src="images/img3.png" alt="Flowers">
 
-The NGINX+ dashboard to view service access metrics:
+## NGINX Plus based Ingress Control to control and secure Inference workload
+- SSL/TLS encryption
+- Health Monioring
+- Advanced Web Application Firewall (WAF)
 
-<img src="images/img2.png" alt="Flowers">
+<img src="images/vs-config.png" alt="Flowers">
+
+SSL:
+When NGINX is used as a proxy, it can offload the SSL decryption processing from backend servers
+you can test connectivity to the Triton Inference server(s) by running the included simple_http_infer_client.py python script:
+
+```bash
+python3 simple_http_infer_client.py -u *<triton server http URL>> --ssl --insecure
+```
+
+<img src="images/ssl.png" alt="Flowers">
+
+NGINX Plus can periodically check the health of upstream inference servers by sending special health-check requests to each server and verifying the correct response.
+The NGINX+ dashboard to view service access metrics: 
+<img src="images/monitor.png" alt="Flowers">
+
+NGINX App Protect (NAP)
+Deploying NGINX App Protect onto an NGINX Kubernetes Ingress Controller will protect all applications.
+<img src="images/waf.png" alt="Flowers">
 
 ## Cleanup
 
